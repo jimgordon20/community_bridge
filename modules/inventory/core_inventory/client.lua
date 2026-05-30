@@ -1,8 +1,6 @@
 ---@diagnostic disable: duplicate-set-field
 if GetResourceState('core_inventory') == 'missing' then return end
 local core = exports.core_inventory
--- Core inventory docs available at https://docs.c8re.store/core-inventory/api/server#getitemslist
-Callback = Callback or Require("lib/callback/shared/callback.lua")
 
 Inventory = Inventory or {}
 
@@ -14,7 +12,7 @@ end
 
 local cachedItemList = nil
 --- Return the item info in oxs format, {name, label, stack, weight, description, image}
---- https://docs.c8re.store/core-inventory/api/server#getitemslist
+--- https://docs.c8re.store/core-inventory/exports#client-exports-%E2%80%94-inventory-ui
 --- @param item string
 --- @return table
 Inventory.GetItemInfo = function(item)
@@ -22,24 +20,22 @@ Inventory.GetItemInfo = function(item)
     return itemList[item] or {}
 end
 
----This will return the entire items table from the inventory.
+---This will return the entire items table from the inventory in the ox format.
 ---@return table 
 Inventory.Items = function()
-    local frameworkName = Framework.GetFrameworkName()
-    if not frameworkName then return {} end
+    if cachedItemList then return cachedItemList end
+    local allItems = core:getItemsList()
+    if not allItems then return {} end
     local dataRepack = {}
-    if frameworkName == 'es_extended' then
-        if not cachedItemList then cachedItemList = Callback.Trigger('community_bridge:Callback:core_inventory', false) end
-        dataRepack = cachedItemList or {}
-    elseif frameworkName == 'qb-core' then
-        dataRepack = Framework.Shared.Items or {}
-    end
-    for itemName, itemData in pairs(dataRepack) do
+    for itemName, itemData in pairs(allItems) do
         if itemData and itemData.name then
-            dataRepack[itemName].image = Inventory.GetImagePath(itemData.name)
-            dataRepack[itemName].stack = dataRepack[itemName].unique or false
+            dataRepack[itemName] = {
+                image = Inventory.GetImagePath(itemData.name),
+                stack = itemData.unique or false
+            }
         end
     end
+    cachedItemList = dataRepack
     return dataRepack
 end
 

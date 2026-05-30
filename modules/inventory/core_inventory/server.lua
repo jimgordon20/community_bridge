@@ -3,7 +3,6 @@ if GetResourceState('core_inventory') == 'missing' then return end
 
 Inventory = Inventory or {}
 Inventory.Stashes = Inventory.Stashes or {}
-Callback = Callback or Require("lib/callback/shared/callback.lua")
 local core = exports.core_inventory
 
 ---This will get the name of the in use resource.
@@ -20,8 +19,7 @@ end
 ---@param metadata table
 ---@return boolean
 Inventory.AddItem = function(src, item, count, slot, metadata)
-    -- docs specify a table returned on success, on failure it returns false.
-    -- https://docs.c8re.store/core-inventory/api/server#additem
+    -- https://docs.c8re.store/core-inventory/exports#server-exports-%E2%80%94-items
     local success = core:addItem(src, item, count, metadata)
     if not success then return false end
     TriggerClientEvent("community_bridge:client:inventory:updateInventory", src, {action = "add", item = item, count = count, slot = slot, metadata = metadata})
@@ -48,16 +46,8 @@ Inventory.RemoveItem = function(src, item, count, slot, metadata)
     end
     TriggerClientEvent("community_bridge:client:inventory:updateInventory", src, {action = "remove", item = item, count = count, slot = slot, metadata = metadata})
     if slot then
-        local identifier = Framework.GetPlayerIdentifier(src)
-        if not identifier then return false end
-        local framework = Bridge.Framework.GetFrameworkName()
-        if framework == 'es_extended' then
-            identifier = string.gsub(identifier, ":", "")
-        end
-        local weirdInventoryName = 'content-' .. identifier
-        -- No return value specified in docs, so we assume none.
-        -- https://docs.c8re.store/core-inventory/api/server#removeitemexact
-        return core:removeItemExact(weirdInventoryName, slot, count)
+        -- https://docs.c8re.store/core-inventory/exports#server-exports-%E2%80%94-items
+        return core:removeItemExact(src, slot, count)
     end
     core:removeItem(src, item, count)
     return true
@@ -248,12 +238,6 @@ Inventory.GetImagePath = function(item)
     local imagePath = file and string.format("nui://core_inventory/html/img/%s.png", item)
     return imagePath or "https://avatars.githubusercontent.com/u/47620135"
 end
-
----This is used for the esx users, documentation doesnt show a client side available option for the inventory so we use jank callbacks to get this.
-Callback.Register('community_bridge:Callback:core_inventory', function(source)
-    local items = core:getItemsList()
-	return items or {}
-end)
 
 ---This will return the entire items table from the inventory.
 ---@return table 
